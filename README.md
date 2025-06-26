@@ -1,4 +1,15 @@
 # Micropython บน Esp32 ผ่าน Thony
+    """
+    สั่งจ่ายเหรียญผ่าน Modbus RTU
+    สมมติว่าเครื่องจ่ายเงินมี Holding Register (FC3/FC16) หรือ Coil (FC1/FC5)
+    สำหรับสั่งจ่ายเงิน
+    
+    คุณต้องตรวจสอบคู่มือของเครื่องจ่ายเงินว่าใช้ Function Code อะไร
+    และ Register Address/Coil Address เบอร์อะไร สำหรับสั่งจ่าย
+    
+    ตัวอย่าง: สมมติว่า Holding Register Address 40001 (0x0000) ใช้สำหรับใส่จำนวนเหรียญที่ต้องการจ่าย
+    """
+
 # --- Configuration ---
 RS485_UART_ID = 2  # UART2 บน ESP32
 
@@ -19,6 +30,13 @@ DEBOUNCE_TIME_MS = 100 # Minimum time between two valid coin pulses (millisecond
                        # ขึ้นอยู่กับลักษณะพัลส์ของตัวหยอดเหรียญคุณ
                        
 # ESP32 , RS485 , COINS , TM1637 , R-10K
+RS485 to TTL (1)
+
+เครื่องหยอดเหรียญ 12V
+
+TM1637 quad 7-segment LED
+
+R10K (1)
 
 # Modbus RTU  9600 Master & Slave
 BAUD_RATE = 9600
