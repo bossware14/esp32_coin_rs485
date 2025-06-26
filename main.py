@@ -20,7 +20,7 @@ SAVE_INTERVAL_SECONDS = 60 # How often to save data to file (e.g., every 60 seco
 # --- Global Variables for Wallet Data ---
 coin_balance = 0
 coin_acceptor_count = 0
-
+last_coin = 0
 # --- Global for timing file saves ---
 last_save_time = time.time()
 
@@ -30,26 +30,18 @@ DEBOUNCE_TIME_MS = 100 # Minimum time between two valid coin pulses (millisecond
                        # ปรับค่านี้ตามความเหมาะสม เช่น 50ms, 100ms หรือ 200ms
                        # ขึ้นอยู่กับลักษณะพัลส์ของตัวหยอดเหรียญคุณ
 
+
 # --- Coin Acceptor ISR (Interrupt Service Routine) ---
 def coin_pulse_handler(pin):
     global coin_acceptor_count, coin_balance, last_coin_pulse_time
     current_time_ms = time.ticks_ms() # Get current time in milliseconds
-
-    # Check if enough time has passed since the last valid pulse (debouncing)
     if time.ticks_diff(current_time_ms, last_coin_pulse_time) > DEBOUNCE_TIME_MS:
-        # Check pin value again to ensure it's still high (optional, but good for noisy lines)
-        # If the pulse is very short, this might miss it, so test carefully.
-        # For typical coin acceptors, a rising edge with pull-down is usually clean enough.
-        # if pin.value() == 1: # Only count if the pin is still high after a tiny delay
         coin_acceptor_count += 1
         coin_balance += 1
         last_coin_pulse_time = current_time_ms # Update the last valid pulse time
-        print(f"[{time.time():.0f}] Coin detected! Balance: {coin_balance}, Count: {coin_acceptor_count}")
     else:
         coin_acceptor_count = 0
         coin_balance = 0
-        print(f"[{time.time():.0f}] Debounce ignored pulse. Diff: {time.ticks_diff(current_time_ms, last_coin_pulse_time)}")
-
 
 # --- File Operations for Data Persistence ---
 def save_wallet_data():
@@ -64,7 +56,7 @@ def save_wallet_data():
         }
         with open(WALLET_DATA_FILE, "w") as f:
             json.dump(data_to_save, f)
-        print(f"[{time.time():.0f}] Wallet data saved to {WALLET_DATA_FILE}. Balance: {coin_balance}, Count: {coin_acceptor_count}")
+        #print(f"[{time.time():.0f}] Wallet data saved to {WALLET_DATA_FILE}. Balance: {coin_balance}, Count: {coin_acceptor_count}")
     except Exception as e:
         print(f"[{time.time():.0f}] Error saving wallet data: {e}")
 
@@ -182,7 +174,7 @@ def read_message(uart, timeout_ms=500):
                         buffer = buffer[expected_packet_length:] # Remove processed packet from buffer
                         return data_part
                     else:
-                        print(f"[{time.time():.0f}] Checksum mismatch: Expected {calculated_checksum}, Got {received_checksum}. Discarding packet.")
+                        #print(f"[{time.time():.0f}] Checksum mismatch: Expected {calculated_checksum}, Got {received_checksum}. Discarding packet.")
                         # Discard this bad packet by shifting the buffer past the current start byte
                         buffer = buffer[1:] # Shift to find next potential start byte
                 else:
@@ -197,14 +189,14 @@ def main_slave_mode():
     """
     ESP32 acts as a Slave, waiting for commands from a Master.
     """
-    global last_save_time, coin_balance, coin_acceptor_count
+    global last_save_time, coin_balance, coin_acceptor_count,last_coin
     print(f"[{time.time():.0f}] Initializing ESP32 Custom RS485 Slave Wallet...")
     load_wallet_data()
     uart = machine.UART(RS485_UART_ID, baudrate=BAUD_RATE,
                         tx=machine.Pin(RS485_TX_PIN),
                         rx=machine.Pin(RS485_RX_PIN))
     print(f"[{time.time():.0f}] UART{RS485_UART_ID} initialized on TX:{RS485_TX_PIN}, RX:{RS485_RX_PIN} at {BAUD_RATE} baud.")
-
+    last_coin = coin_balance
     if RS485_DE_RE_PIN is not None:
         machine.Pin(RS485_DE_RE_PIN, machine.Pin.OUT).value(0) # Start in RX mode
         print(f"[{time.time():.0f}] DE/RE pin initialized on GPIO{RS485_DE_RE_PIN}.")
@@ -216,6 +208,7 @@ def main_slave_mode():
     import tm1637
     from machine import Pin
     tm = tm1637.TM1637(clk=Pin(19), dio=Pin(22))
+    tm.number(coin_balance)
     print(f"[{time.time():.0f}] Ready to receive custom RS485 commands and coin pulses (Slave Mode)...")
     while True:
         # Check for periodic data save
@@ -226,16 +219,14 @@ def main_slave_mode():
 
         # Listen for incoming messages
         received_data = read_message(uart, timeout_ms=100) # Shorter timeout for quick loop
-        if coin_balance == 0 :
-           led.value(0)
-        else:
-           led.value(1)
-        tm.number(coin_balance)
+
+        if coin_balance != last_coin :
+            last_coin = coin_balance
+            tm.number(coin_balance)
 
         if received_data:
             try:
                 command = received_data.decode('utf-8').strip() # Assume commands are UTF-8 strings
-                print(f"[{time.time():.0f}] Received command: '{command}'")
                 response = b"OK"
                 amount = 0
                 data_changed = False
@@ -286,11 +277,8 @@ def main_slave_mode():
                 else:
                     res_status = "error"
                     response = b"ERROR: Unknown command"
-
-                #print(f"[{time.time():.0f}] Sending response: '{response.decode('utf-8')}'")
                 data = {"status":res_status,"coin_balance":coin_balance,"coin_acceptor_count":coin_acceptor_count,"response":response,"data_changed":data_changed,"amount":amount} 
                 send_message(uart, json.dumps(data).encode('utf-8'))
-                print(data)
                 if data_changed:
                     save_wallet_data()
 
@@ -343,28 +331,32 @@ def main_master_mode():
         time.sleep(2) # Wait 2 seconds before sending next command
 
 
-debounce_delay = 1000
+debounce_delay = 100
 timer_direction = 0
 def button_pressed(pin):
-    global timer_direction
-    time.sleep_ms(debounce_delay)
+    global timer_direction,coin_balance
     now = time.ticks_ms()
-    print("button_pressed",pin.value(),timer_direction,now,debounce_delay)
-    if pin.value() == 0:
-            led.value(1)
-            timer_direction += 1
-    if pin.value() == 1:
-            led.value(0)
-            timer_direction = 0
 
-    if timer_direction == 1 and pin.value() == 0 :
-        uart = machine.UART(RS485_UART_ID, baudrate=BAUD_RATE,
-                        tx=machine.Pin(RS485_TX_PIN),
-                        rx=machine.Pin(RS485_RX_PIN))
-        send_message(uart, 'SUB_BALANCE=1')
-        response = json.loads(read_message(uart, timeout_ms=1000))
-        print(response)
+    if pin.value() == 1 and led.value() == 0 :
+        coin_balance = 0
+        timer_direction = 0
+        led.value(0)
+        return False
 
+    if pin.value() == 0 and timer_direction == 10 :
+        led.value(1)
+        time.sleep(1)
+        timer_direction = 0
+        led.value(0)
+        return False
+
+    if pin.value() == 0 and led.value() == 0 :
+        led.value(1)
+        coin_balance += 1
+        timer_direction += 1
+        time.sleep_ms(50)
+        led.value(0)
+        return False
 
 reset_button = machine.Pin(0, mode=machine.Pin.IN, pull=machine.Pin.PULL_UP)
 reset_button.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_pressed)
