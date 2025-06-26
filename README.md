@@ -11,7 +11,13 @@ RS485_RX_PIN = 16  # กำหนดขา RX ของ UART2 (GPIO16)
 #ถ้าบอร์ดของคุณไม่มีขา DE/RE ที่เชื่อมกับ ESP32 ให้ตั้งค่าเป็น None
 
 RS485_DE_RE_PIN = None # GPIO pin for DE/RE on your RS485 transceiver
+# --- Global for Debouncing ---
+last_coin_pulse_time = 0 # Store the timestamp of the last valid coin pulse
 
+DEBOUNCE_TIME_MS = 100 # Minimum time between two valid coin pulses (milliseconds)
+                       # ปรับค่านี้ตามความเหมาะสม เช่น 50ms, 100ms หรือ 200ms
+                       # ขึ้นอยู่กับลักษณะพัลส์ของตัวหยอดเหรียญคุณ
+                       
 # ESP32 , RS485 , COINS , TM1637 , R-10K
 
 # Modbus RTU  9600 Master & Slave
