@@ -29,13 +29,13 @@ DEBOUNCE_TIME_MS = 100 # Minimum time between two valid coin pulses (millisecond
                        # ขึ้นอยู่กับลักษณะพัลส์ของตัวหยอดเหรียญคุณ
                        
 # ESP32 , RS485 , COINS , TM1637 , R-10K
-RS485 to TTL (1)
+    RS485 to TTL (1)
 
-เครื่องหยอดเหรียญ 12V
+    เครื่องหยอดเหรียญ 12V
 
-TM1637 quad 7-segment LED
+    TM1637 quad 7-segment LED
 
-R10K (1)
+    R10K (1)
 
 # Modbus RTU  9600 Master & Slave
 BAUD_RATE = 9600
