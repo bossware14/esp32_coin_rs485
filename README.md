@@ -1,4 +1,4 @@
-# Micropython บน Esp32 ผ่าน Thony
+# Micropython Esp32 Coin Wallet Modbus
     """
     สั่งจ่ายเหรียญผ่าน Modbus RTU
     สมมติว่าเครื่องจ่ายเงินมี Holding Register (FC3/FC16) หรือ Coil (FC1/FC5)
