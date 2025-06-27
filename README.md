@@ -22,36 +22,26 @@
     """
     
 # --- Global for Debouncing ---
-last_coin_pulse_time = 0 # Store the timestamp of the last valid coin pulse
-
-DEBOUNCE_TIME_MS = 100 # Minimum time between two valid coin pulses (milliseconds)
+    last_coin_pulse_time = 0 # Store the timestamp of the last valid coin pulse
+    DEBOUNCE_TIME_MS = 100 # Minimum time between two valid coin pulses (milliseconds)
                        # ปรับค่านี้ตามความเหมาะสม เช่น 50ms, 100ms หรือ 200ms
                        # ขึ้นอยู่กับลักษณะพัลส์ของตัวหยอดเหรียญคุณ
                        
 # ESP32 , RS485 , COINS , TM1637 , R-10K
     RS485 to TTL (1)
-
     เครื่องหยอดเหรียญ 12V
-
     TM1637 quad 7-segment LED
-
     R10K (1)
 
 # Modbus RTU  9600 Master & Slave
-BAUD_RATE = 9600
-"GET_STATUS"
-
-"GET_BALANCE"
-
-"ADD_BALANCE=1"
-
-"GET_COIN_COUNT"
-
-"SUB_BALANCE=1"
-
-"RESET_COUNT"
-
-"RESET_BALANCE"
+    BAUD_RATE = 9600
+    "GET_STATUS"
+    "GET_BALANCE"
+    "ADD_BALANCE=1"
+    "GET_COIN_COUNT"
+    "SUB_BALANCE=1"
+    "RESET_COUNT"
+    "RESET_BALANCE"
 
 "UNKNOWN_CMD"![1000017838](https://github.com/user-attachments/assets/10f41497-3a49-4716-b408-10b37d2d699a)
 
